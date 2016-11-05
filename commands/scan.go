@@ -67,6 +67,7 @@ type ScanCmd struct {
 	reportText      bool
 	reportS3        bool
 	reportAzureBlob bool
+	reportKafka     bool
 
 	awsProfile  string
 	awsS3Bucket string
@@ -75,6 +76,13 @@ type ScanCmd struct {
 	azureAccount   string
 	azureKey       string
 	azureContainer string
+
+	kafkaBrokers          string
+	kafkaTopic            string
+	kafkaTLSCertificate   string
+	kafkaTLSKey           string
+	kafkaTLSCACertificate string
+	kafkaTLSVerify        bool
 
 	sshExternal bool
 }
@@ -106,6 +114,7 @@ func (*ScanCmd) Usage() string {
 		[-report-s3]
 		[-report-slack]
 		[-report-text]
+		[-report-kafka]
 		[-http-proxy=http://192.168.0.1:8080]
 		[-ask-key-password]
 		[-debug]
@@ -116,6 +125,12 @@ func (*ScanCmd) Usage() string {
 		[-azure-account=accout]
 		[-azure-key=key]
 		[-azure-container=container]
+		[-kafka-brokers=brokers]
+		[-kafaka-topic=topic]
+		[-kafka-tls-certificate=/path/to/certificate]
+		[-kafka-tls-key=/path/to/key]
+		[-kafka-tls-cacertificate=/path/to/cacert]
+		[-kafka-tls-verify]
 
 		[SERVER]...
 `
@@ -222,6 +237,14 @@ func (p *ScanCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.azureAccount, "azure-account", "", "Azure account name to use. AZURE_STORAGE_ACCOUNT environment variable is used if not specified")
 	f.StringVar(&p.azureKey, "azure-key", "", "Azure account key to use. AZURE_STORAGE_ACCESS_KEY environment variable is used if not specified")
 	f.StringVar(&p.azureContainer, "azure-container", "", "Azure storage container name")
+
+	f.BoolVar(&p.reportKafka, "report-kafka", false, "Write reports to kafka brokers")
+	f.StringVar(&p.kafkaBrokers, "kafka-brokers", "", "List of kafka brokers, comma delimited")
+	f.StringVar(&p.kafkaTopic, "kafka-topic", "vuls", "Kafka topic")
+	f.StringVar(&p.kafkaTLSCertificate, "kafka-tls-certificate", "", "Path to certificate")
+	f.StringVar(&p.kafkaTLSKey, "kafka-tls-key", "", "Path to key")
+	f.StringVar(&p.kafkaTLSCACertificate, "kafka-tls-cacertificate", "", "Path ca certificate")
+	f.BoolVar(&p.kafkaTLSVerify, "kafka-tls-verify", false, "Perform certificate verification")
 
 	f.BoolVar(
 		&p.askKeyPassword,
@@ -366,6 +389,15 @@ func (p *ScanCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 			return subcommands.ExitUsageError
 		}
 		reports = append(reports, report.AzureBlobWriter{})
+	}
+	if p.reportKafka {
+		c.Conf.KafkaBrokers = p.kafkaBrokers
+		c.Conf.KafkaTopic = p.kafkaTopic
+		c.Conf.KafkaTLSCertificate = p.kafkaTLSCertificate
+		c.Conf.KafkaTLSKey = p.kafkaTLSKey
+		c.Conf.KafkaTLSCACertificate = p.kafkaTLSCACertificate
+		c.Conf.KafkaTLSVerify = p.kafkaTLSVerify
+		reports = append(reports, report.KafkaWriter{})
 	}
 
 	c.Conf.ResultsDir = p.resultsDir

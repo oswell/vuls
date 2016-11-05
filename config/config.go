@@ -61,6 +61,13 @@ type Config struct {
 	AzureKey       string
 	AzureContainer string
 
+	KafkaBrokers          string
+	KafkaTopic            string
+	KafkaTLSCertificate   string
+	KafkaTLSKey           string
+	KafkaTLSCACertificate string
+	KafkaTLSVerify        bool
+
 	//  CpeNames      []string
 	//  SummaryMode          bool
 }
@@ -85,7 +92,6 @@ func (c Config) Validate() bool {
 		errs = append(errs, fmt.Errorf(
 			"CVE DB type must be either 'sqlite3' or 'mysql'.  -cve-dictionary-dbtype: %s", c.CveDBType))
 	}
-
 
 	if c.CveDBType == "sqlite3" {
 		if len(c.CveDBPath) != 0 {
