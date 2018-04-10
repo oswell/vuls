@@ -53,11 +53,14 @@
     "internal/sdkrand",
     "internal/shareddefaults",
     "private/protocol",
+    "private/protocol/json/jsonutil",
+    "private/protocol/jsonrpc",
     "private/protocol/query",
     "private/protocol/query/queryutil",
     "private/protocol/rest",
     "private/protocol/restxml",
     "private/protocol/xml/xmlutil",
+    "service/kinesis",
     "service/s3",
     "service/sts"
   ]
@@ -385,6 +388,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6f9e0e0abf431f853507394b28b24360e764850217a4bc8e6bdf300b34891dd2"
+  inputs-digest = "916e43457f6ccfb0d47f7c6aa9cde4a5ee16a5e79ea0e95cfc85bece1cd61775"
   solver-name = "gps-cdcl"
   solver-version = 1

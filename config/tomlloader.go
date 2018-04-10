@@ -46,6 +46,7 @@ func (c TOMLLoader) Load(pathToToml, keyPass string) error {
 	Conf.Slack = conf.Slack
 	Conf.HipChat = conf.HipChat
 	Conf.Syslog = conf.Syslog
+	Conf.Kinesis = conf.Kinesis
 
 	d := conf.Default
 	Conf.Default = d

@@ -98,6 +98,7 @@ type Config struct {
 	Slack   SlackConf
 	HipChat HipChatConf
 	Syslog  SyslogConf
+	Kinesis KinesisConf
 	Default ServerInfo
 	Servers map[string]ServerInfo
 
@@ -146,6 +147,7 @@ type Config struct {
 	GZIP bool
 
 	AwsProfile             string
+	AwsCredentialFile      string
 	AwsRegion              string
 	S3Bucket               string
 	S3ResultsDir           string
@@ -496,6 +498,20 @@ type SyslogConf struct {
 	Tag      string
 
 	Verbose bool
+}
+
+// KinesisConf is the configuration for Kinesis reporting
+type KinesisConf struct {
+	Region  string
+	Stream  string
+	Verbose bool
+
+	// ForceHostname allows enforcement of hostname via os.Hostname()
+	// This is useful for local scans where hostname is "localhost"
+	ForceHostname bool
+
+	// ExtraFields allows mapping of arbitrary data into each record
+	ExtraFields map[string]string
 }
 
 // Validate validates configuration

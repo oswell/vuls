@@ -63,6 +63,7 @@ type ReportCmd struct {
 	toLocalFile bool
 	toS3        bool
 	toAzureBlob bool
+	toKinesis   bool
 
 	formatJSON        bool
 	formatXML         bool
@@ -74,6 +75,7 @@ type ReportCmd struct {
 	gzip bool
 
 	awsProfile                string
+	awsCredentialFile         string
 	awsRegion                 string
 	awsS3Bucket               string
 	awsS3ResultsDir           string
@@ -82,6 +84,8 @@ type ReportCmd struct {
 	azureAccount   string
 	azureKey       string
 	azureContainer string
+
+	kinesisStream string
 
 	pipe bool
 	diff bool
@@ -116,6 +120,7 @@ func (*ReportCmd) Usage() string {
 		[-to-slack]
 		[-to-hipchat]
 		[-to-localfile]
+		[-to-kinesis]
 		[-to-s3]
 		[-to-azure-blob]
 		[-format-json]
@@ -126,6 +131,7 @@ func (*ReportCmd) Usage() string {
 		[-format-full-text]
 		[-gzip]
 		[-aws-profile=default]
+		[-aws-credential-file=/home/user/.aws/credentials]
 		[-aws-region=us-west-2]
 		[-aws-s3-bucket=bucket_name]
 		[-aws-s3-results-dir=/bucket/path/to/results]
@@ -133,6 +139,7 @@ func (*ReportCmd) Usage() string {
 		[-azure-account=account]
 		[-azure-key=key]
 		[-azure-container=container]
+		[-kinesis-stream]
 		[-http-proxy=http://192.168.0.1:8080]
 		[-debug]
 		[-debug-sql]
@@ -268,6 +275,7 @@ func (p *ReportCmd) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&p.toHipChat, "to-hipchat", false, "Send report via hipchat")
 	f.BoolVar(&p.toEMail, "to-email", false, "Send report via Email")
 	f.BoolVar(&p.toSyslog, "to-syslog", false, "Send report via Syslog")
+	f.BoolVar(&p.toKinesis, "to-kinesis", false, "Send report via Kinesis")
 	f.BoolVar(&p.toLocalFile,
 		"to-localfile",
 		false,
@@ -278,6 +286,7 @@ func (p *ReportCmd) SetFlags(f *flag.FlagSet) {
 		false,
 		"Write report to S3 (bucket/yyyyMMdd_HHmm/servername.json/xml/txt)")
 	f.StringVar(&p.awsProfile, "aws-profile", "default", "AWS profile to use")
+	f.StringVar(&p.awsCredentialFile, "aws-credential-file", "", "AWS Credential file")
 	f.StringVar(&p.awsRegion, "aws-region", "us-east-1", "AWS region to use")
 	f.StringVar(&p.awsS3Bucket, "aws-s3-bucket", "", "S3 bucket name")
 	f.StringVar(&p.awsS3ResultsDir, "aws-s3-results-dir", "", "/bucket/path/to/results")
@@ -296,6 +305,8 @@ func (p *ReportCmd) SetFlags(f *flag.FlagSet) {
 		"",
 		"Azure account key to use. AZURE_STORAGE_ACCESS_KEY environment variable is used if not specified")
 	f.StringVar(&p.azureContainer, "azure-container", "", "Azure storage container name")
+
+	f.StringVar(&p.kinesisStream, "kinesis-stream", "", "Kinesis stream to forward reports to")
 
 	f.BoolVar(
 		&p.pipe,
@@ -337,6 +348,7 @@ func (p *ReportCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 	c.Conf.ToLocalFile = p.toLocalFile
 	c.Conf.ToS3 = p.toS3
 	c.Conf.ToAzureBlob = p.toAzureBlob
+	c.Conf.Kinesis.Stream = p.kinesisStream
 
 	c.Conf.FormatXML = p.formatXML
 	c.Conf.FormatJSON = p.formatJSON
@@ -422,6 +434,23 @@ func (p *ReportCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 			return subcommands.ExitUsageError
 		}
 		reports = append(reports, report.AzureBlobWriter{})
+	}
+
+	if p.toKinesis {
+		c.Conf.AwsRegion = p.awsRegion
+		c.Conf.Kinesis.Stream = p.kinesisStream
+		c.Conf.AwsProfile = p.awsProfile
+		c.Conf.AwsCredentialFile = p.awsCredentialFile
+
+		if c.Conf.AwsRegion == "" {
+			util.Log.Error("Kinesis reporting requires an AWS region be defined with the -aws-region option")
+			return subcommands.ExitUsageError
+		}
+		if c.Conf.Kinesis.Stream == "" {
+			util.Log.Error("Kinesis reporting requires an kinesis stream be defined with the -kinesis-stream option")
+			return subcommands.ExitUsageError
+		}
+		reports = append(reports, report.KinesisWriter{})
 	}
 
 	if !(p.formatJSON || p.formatOneLineText ||
